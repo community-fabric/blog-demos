@@ -5,7 +5,7 @@ from urllib.parse import urljoin
 
 
 class IPFabric(Session):
-    def __init__(self, base_url: str, token: str, verify: bool = False, api_version: str = "v1"):
+    def __init__(self, base_url: str, token: str, verify: bool = True, api_version: str = "v1"):
         """
         Initiate IPFabric session
         :param base_url: str: https://your_instance.ipfabric.io
@@ -32,7 +32,7 @@ class IPFabric(Session):
             url: str,
             payload: dict,
             data: Optional[Union[list, None]] = None,
-            limit: int = 1000,
+            limit: int = 10000,
             start: int = 0
     ):
         """
