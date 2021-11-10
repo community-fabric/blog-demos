@@ -22,7 +22,20 @@ if __name__ == '__main__':
         ],
         "snapshot": "$last"
     }
-    sites = ipf.query('api/v1/tables/inventory/sites', payload)
+    sites = ipf.query('tables/inventory/sites', payload)
 
     pprint(sites[0])
 
+"""
+{'devicesCount': 22,
+ 'id': '1111118694',
+ 'networksCount': 61,
+ 'rDCount': 3,
+ 'routersCount': 6,
+ 'siteKey': '1111118694',
+ 'siteName': 'HWLAB',
+ 'stpDCount': 2,
+ 'switchesCount': 8,
+ 'usersCount': 13,
+ 'vlanCount': 131}
+"""
