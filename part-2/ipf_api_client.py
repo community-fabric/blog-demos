@@ -4,6 +4,7 @@ from collections import OrderedDict
 from typing import Optional, Union
 from urllib.parse import urljoin, urlparse
 from json import loads
+from models import Snapshot, Inventory
 
 from httpx import Client as httpxClient
 
@@ -63,18 +64,12 @@ class IPFClient(httpxClient):
 
     @snapshot_id.setter
     def snapshot_id(self, snapshot_id):
-        if snapshot_id in ["$last", None]:
-            # If no snapshot then use last and convert it to an ID
-            self._snapshot_id = self._fetch_snapshot_id()
-        elif snapshot_id == "$prev":
-            self._snapshot_id = self._fetch_snapshot_id(prev=True)
-        elif snapshot_id == "$lastLocked":
-            self._snapshot_id = self._fetch_snapshot_id(locked=True)
-        elif snapshot_id not in self.snapshots:
+        snapshot_id = "$last" if not snapshot_id else snapshot_id
+        if snapshot_id not in self.snapshots:
             # Verify snapshot ID is valid
             raise ValueError(f"##ERROR## EXIT -> Incorrect Snapshot ID: '{snapshot_id}'")
         else:
-            self._snapshot_id = snapshot_id
+            self._snapshot_id = self.snapshots[snapshot_id].id
 
     def fetch_os_version(self):
         """
@@ -93,44 +88,24 @@ class IPFClient(httpxClient):
     def get_snapshots(self):
         """
         Gets all snapshots from IP Fabric and returns a dictionary of {ID: Snapshot_info}
-        :return: dict[str, dict]: Dictionary with ID as key and dictionary with info as the value
+        :return: dict[str, Snapshot]: Dictionary with ID as key and dictionary with info as the value
         """
         res = self.get("/snapshots")
         res.raise_for_status()
 
         snap_dict = OrderedDict()
         for s in res.json():
-            snap_dict[s["id"]] = {
-                "id": s["id"],
-                "name": s["name"],
-                "count": s["totalDevCount"],
-                "state": s["state"],
-                "locked": s["locked"]
-            }
-
+            snap = Snapshot(**s)
+            snap_dict[snap.id] = snap
+            if snap.loaded:
+                if "$lastLocked" not in snap_dict and snap.locked:
+                    snap_dict["$lastLocked"] = snap
+                if "$last" not in snap_dict:
+                    snap_dict["$last"] = snap
+                    continue
+                if "$prev" not in snap_dict:
+                    snap_dict["$prev"] = snap
         return snap_dict
-
-    def _fetch_snapshot_id(self, prev: bool = False, locked: bool = False):
-        """
-        Method to get Last Loaded snapshot
-        :param prev: bool: If True it will get the 2nd latest snapshot
-        :param locked: bool: If True it will get the latest locked snapshot
-        :return: str: Snapshot ID
-        """
-        snapshots = self.snapshots.values()
-        s_iter = iter(snapshots)
-
-        if locked:
-            try:
-                return next((s["id"] for s in s_iter if s['state'] == 'loaded' and s["locked"]))
-            except StopIteration:
-                raise ValueError("No loaded locked snapshots found on IP Fabric.")
-
-        snapshot = next((s["id"] for s in s_iter if s['state'] == 'loaded'))
-        if prev:
-            return next((s["id"] for s in s_iter if s['state'] == 'loaded'))
-        else:
-            return snapshot
 
     @check_format
     def fetch(
@@ -194,15 +169,14 @@ class IPFClient(httpxClient):
     @check_format
     def query(self, url: str, data: Union[str, dict]):
         """
-        Submits a query, does no formating on the parameters.  Use for copy/pasting from the webpage
+        Submits a query, does no formating on the parameters.  Use for copy/pasting from the webpage.
         :param url: str: Example: https://demo1.ipfabric.io/api/v1/tables/vlan/device-summary
-        :param data: Union[str, dict]: JSON object to submit in POST, can be string read from file.
+        :param data: Union[str, dict]: Dictionary to submit in POST or can be JSON string (i.e. read from file).
         :return: list: List of Dictionary objects.
         """
-        if isinstance(data, dict):
-            res = self.post(url, json=data)
-        else:
-            res = self.post(url, data=data)
+        if isinstance(data, str):
+            data = loads(data)
+        res = self.post(url, json=data)
         res.raise_for_status()
         return res.json()["data"]
 
@@ -248,31 +222,3 @@ class IPFClient(httpxClient):
         if limit + start < r["_meta"]["count"]:
             self._ipf_pager(url, payload, data, start+limit)
         return data
-
-
-class Table:
-    def __init__(self, client: IPFClient, name: str):
-        self.endpoint = name
-        self.name = name.split('/')[-1]
-        self.client = client
-
-    def all(self, filters: dict = None, snapshot_id: Optional[str] = None):
-        """
-        Gets all data from corresponding endpoint
-        :param filters: dict: Optional filters
-        :param snapshot_id: str: Optional snapshot ID to override class
-        :return: list: List of Dictionaries
-        """
-        return self.client.fetch_all(self.endpoint, filters=filters, snapshot_id=snapshot_id)
-
-
-class Inventory:
-    def __init__(self, client: IPFClient):
-        self.sites = Table(client, '/tables/inventory/sites')
-        self.devices = Table(client, '/tables/inventory/devices')
-        self.models = Table(client, '/tables/inventory/summary/models')
-        self.platforms = Table(client, '/tables/inventory/summary/platforms')
-        self.families = Table(client, '/tables/inventory/summary/families')
-        self.vendors = Table(client, '/tables/inventory/summary/vendors')
-        self.part_numbers = Table(client, '/tables/inventory/pn')
-        self.interfaces = Table(client, '/tables/inventory/interfaces')
