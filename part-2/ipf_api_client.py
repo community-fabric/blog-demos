@@ -3,15 +3,18 @@ import re
 from collections import OrderedDict
 from typing import Optional, Union
 from urllib.parse import urljoin, urlparse
+from json import loads
 
 from httpx import Client as httpxClient
 
 
-def check_url(func):
+def check_format(func):
     """
-    Checks to make sure api/v1/ is not in the URL
+    Checks to make sure api/v1/ is not in the URL and converts filters from json str to dict
     """
     def wrapper(self, url, *args, **kwargs):
+        if "filters" in kwargs and isinstance(kwargs["filters"], str):
+            kwargs["filters"] = loads(kwargs["filters"])
         path = urlparse(url or kwargs["url"]).path
         url = path.split('v1/')[1] if 'v1/' in path else path
         return func(self, url, *args, **kwargs)
@@ -129,12 +132,12 @@ class IPFClient(httpxClient):
         else:
             return snapshot
 
-    @check_url
+    @check_format
     def fetch(
         self,
         url,
         columns: Optional[list[str]] = None,
-        filters: Optional[dict] = None,
+        filters: Optional[Union[dict, str]] = None,
         limit: Optional[int] = 1000,
         start: Optional[int] = 0,
         snapshot_id: Optional[str] = None,
@@ -165,12 +168,12 @@ class IPFClient(httpxClient):
         res.raise_for_status()
         return res.json()["data"]
 
-    @check_url
+    @check_format
     def fetch_all(
             self,
             url: str,
             columns: Optional[list[str]] = None,
-            filters: Optional[dict] = None,
+            filters: Optional[Union[dict, str]] = None,
             snapshot_id: Optional[str] = None,
     ):
         """
@@ -188,18 +191,18 @@ class IPFClient(httpxClient):
 
         return self._ipf_pager(url, payload)
 
-    @check_url
-    def query(self, url: str, params: Union[str, dict]):
+    @check_format
+    def query(self, url: str, data: Union[str, dict]):
         """
         Submits a query, does no formating on the parameters.  Use for copy/pasting from the webpage
         :param url: str: Example: https://demo1.ipfabric.io/api/v1/tables/vlan/device-summary
-        :param params: Union[str, dict]: JSON object to submit in POST, can be string read from file.
+        :param data: Union[str, dict]: JSON object to submit in POST, can be string read from file.
         :return: list: List of Dictionary objects.
         """
-        if isinstance(params, dict):
-            res = self.post(url, json=params)
+        if isinstance(data, dict):
+            res = self.post(url, json=data)
         else:
-            res = self.post(url, data=params)
+            res = self.post(url, data=data)
         res.raise_for_status()
         return res.json()["data"]
 
