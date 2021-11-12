@@ -2,9 +2,20 @@ import os
 import re
 from collections import OrderedDict
 from typing import Optional, Union
-from urllib.parse import urljoin
+from urllib.parse import urljoin, urlparse
 
 from httpx import Client as httpxClient
+
+
+def check_url(func):
+    """
+    Checks to make sure api/v1/ is not in the URL
+    """
+    def wrapper(self, url, *args, **kwargs):
+        path = urlparse(url or kwargs["url"]).path
+        url = path.split('v1/')[1] if 'v1/' in path else path
+        return func(self, url, *args, **kwargs)
+    return wrapper
 
 
 class IPFClient(httpxClient):
@@ -51,11 +62,11 @@ class IPFClient(httpxClient):
     def snapshot_id(self, snapshot_id):
         if snapshot_id in ["$last", None]:
             # If no snapshot then use last and convert it to an ID
-            self._snapshot_id = self.fetch_snapshot_id()
+            self._snapshot_id = self._fetch_snapshot_id()
         elif snapshot_id == "$prev":
-            self._snapshot_id = self.fetch_snapshot_id(prev=True)
+            self._snapshot_id = self._fetch_snapshot_id(prev=True)
         elif snapshot_id == "$lastLocked":
-            self._snapshot_id = self.fetch_snapshot_id(locked=True)
+            self._snapshot_id = self._fetch_snapshot_id(locked=True)
         elif snapshot_id not in self.snapshots:
             # Verify snapshot ID is valid
             raise ValueError(f"##ERROR## EXIT -> Incorrect Snapshot ID: '{snapshot_id}'")
@@ -96,7 +107,7 @@ class IPFClient(httpxClient):
 
         return snap_dict
 
-    def fetch_snapshot_id(self, prev: bool = False, locked: bool = False):
+    def _fetch_snapshot_id(self, prev: bool = False, locked: bool = False):
         """
         Method to get Last Loaded snapshot
         :param prev: bool: If True it will get the 2nd latest snapshot
@@ -118,6 +129,7 @@ class IPFClient(httpxClient):
         else:
             return snapshot
 
+    @check_url
     def fetch(
         self,
         url,
@@ -153,9 +165,10 @@ class IPFClient(httpxClient):
         res.raise_for_status()
         return res.json()["data"]
 
+    @check_url
     def fetch_all(
             self,
-            url,
+            url: str,
             columns: Optional[list[str]] = None,
             filters: Optional[dict] = None,
             snapshot_id: Optional[str] = None,
@@ -174,6 +187,21 @@ class IPFClient(httpxClient):
             payload["filters"] = filters
 
         return self._ipf_pager(url, payload)
+
+    @check_url
+    def query(self, url: str, params: Union[str, dict]):
+        """
+        Submits a query, does no formating on the parameters.  Use for copy/pasting from the webpage
+        :param url: str: Example: https://demo1.ipfabric.io/api/v1/tables/vlan/device-summary
+        :param params: Union[str, dict]: JSON object to submit in POST, can be string read from file.
+        :return: list: List of Dictionary objects.
+        """
+        if isinstance(params, dict):
+            res = self.post(url, json=params)
+        else:
+            res = self.post(url, data=params)
+        res.raise_for_status()
+        return res.json()["data"]
 
     def _get_columns(self, url: str):
         """
