@@ -1,14 +1,17 @@
 from ipfabric import IPFabric
 from os import getenv
 from pprint import pprint
-from ipf_api_client import IPFClient
+from ipf_api_client import IPFClient, Inventory
 
 
 if __name__ == '__main__':
     # ipf = IPFabric('https://demo3.ipfabric.io/', getenv('IPF_TOKEN'))
 
     ipf = IPFClient('https://demo3.ipfabric.io/')
-    sites = ipf.site_list()
+
+    sites = ipf.inventory.sites.all()
+
+    devices = ipf.inventory.devices.all()
     devices = ipf.device_list()
     print()
 

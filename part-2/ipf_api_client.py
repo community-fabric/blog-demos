@@ -25,8 +25,7 @@ class IPFClient(httpxClient):
         :param kwargs:
         """
         try:
-            base_url = base_url or os.environ["IPF_URL"]
-            base_url = urljoin(base_url, "api/v1/")
+            base_url = urljoin(base_url or os.environ["IPF_URL"], "api/v1/")
         except KeyError:
             raise RuntimeError(f"IP Fabric base_url not provided or IPF_URL not set")
 
@@ -42,6 +41,7 @@ class IPFClient(httpxClient):
         self.os_version = self.fetch_os_version()
         self.snapshots = self.get_snapshots()
         self.snapshot_id = snapshot_id
+        self.inventory = Inventory(self)
 
     @property
     def snapshot_id(self):
@@ -118,115 +118,62 @@ class IPFClient(httpxClient):
         else:
             return snapshot
 
-    def site_list(
-        self,
-        filters: Optional[dict] = None,
-        pagination: Optional[dict] = None,
-        snapshot_id: Optional[str] = None,
-    ):
-        """
-        Method to fetch the list of sites from the IPF instance opened in the API client
-        :param filters: [optional] dictionary describing the table filters to be applied to the records
-        :param pagination: [optional] start and length of the "page" of data required
-        :param snapshot_id: [optional] IP Fabric snapshot identifier to override the default
-        :return: list: List of Site dictionaries
-            [
-                {
-                    'siteName': descriptive site name,
-                    'id': site id,
-                    'siteKey': site Key,
-                    'devicesCount': number of devices in this site,
-                }
-            ]
-        """
-        sites = self.fetch_table(
-            "tables/inventory/sites",
-            columns=["siteName", "id", "siteKey", "devicesCount"],
-            filters=filters,
-            pagination=pagination,
-            snapshot_id=snapshot_id or self.snapshot_id,
-        )
-        return sites
-
-    def device_list(
-        self,
-        filters: Optional[dict] = None,
-        pagination: Optional[dict] = None,
-        snapshot_id: Optional[str] = None,
-    ):
-        """
-        Method to fetch the list of devices from the IPF instance opened in the API client, or the one entered
-        Takes parameters to select:
-        * filters - [optional] dictionary describing the table filters to be applied to the records (taken from IP Fabric table description)
-        * pagination - [optional] start and length of the "page" of data required
-        * snapshot_id - [optional] IP Fabric snapshot identifier to override the default defined at object initialisation
-        Returns a list of dictionaries in the form:
-        [
-            {
-                'hostname': device hostname,
-                'siteName': name of the site where the device belongs,
-                'loginIp': IP used for IP Fabric to login to this device,
-                'loginType': method used to connect to the device,
-                'vendor': vendor for this device,
-                'platform': platform of this device,
-                'family': family of this device,
-                'version': OS version running on this device,
-                'sn': Serial Number of the device,
-                'devType': Type of device,
-            }
-        ]
-        """
-
-        devices = self.fetch_table(
-            "tables/inventory/devices",
-            columns=[
-                "hostname",
-                "siteName",
-                "loginIp",
-                "loginType",
-                "vendor",
-                "platform",
-                "family",
-                "version",
-                "sn",
-                "devType",
-            ],
-            filters=filters,
-            pagination=pagination,
-            snapshot_id=snapshot_id or self.snapshot_id,
-        )
-        return devices
-
-    def fetch_table(
+    def fetch(
         self,
         url,
         columns: Optional[list[str]] = None,
         filters: Optional[dict] = None,
-        pagination: Optional[dict] = None,
+        limit: Optional[int] = 1000,
+        start: Optional[int] = 0,
         snapshot_id: Optional[str] = None,
     ):
         """
-        Method to fetch data from IP Fabric tables.
-        Takes parameters to select:
-        * url - [mandatory] a string containing the API endpoint for the table to be queried
-        * columns - [mandatory] a list of strings describing which data is required as output
-        * filters - [optional] dictionary describing the table filters to be applied to the records (taken from IP Fabric table description)
-        * pagination - [optional] start and length of the "page" of data required
-        * snapshot_id - [optional] IP Fabric snapshot identifier to override the default defined at object initialisation
-        Returns JSON describing a dictionary containing the records required.
+        Gets data from IP Fabric for specified endpoint
+        :param url: str: Example tables/vlan/device-summary
+        :param columns: list: Optional list of columns to return, None will return all
+        :param filters: dict: Optional dictionary of filters
+        :param limit: int: Default to 1,000 rows
+        :param start: int: Starts at 0
+        :param snapshot_id: str: Optional snapshot_id to override default
+        :return: list: List of Dictionary objects.
+        """
+
+        payload = dict(
+            columns=columns or self._get_columns(url),
+            snapshot=snapshot_id or self.snapshot_id,
+            pagination=dict(
+                start=start,
+                limit=limit
+            )
+        )
+        if filters:
+            payload["filters"] = filters
+
+        res = self.post(url, json=payload)
+        res.raise_for_status()
+        return res.json()["data"]
+
+    def fetch_all(
+            self,
+            url,
+            columns: Optional[list[str]] = None,
+            filters: Optional[dict] = None,
+            snapshot_id: Optional[str] = None,
+    ):
+        """
+        Gets all data from IP Fabric for specified endpoint
+        :param url: str: Example tables/vlan/device-summary
+        :param columns: list: Optional list of columns to return, None will return all
+        :param filters: dict: Optional dictionary of filters
+        :param snapshot_id: str: Optional snapshot_id to override default
+        :return: list: List of Dictionary objects.
         """
 
         payload = dict(columns=columns or self._get_columns(url), snapshot=snapshot_id or self.snapshot_id)
         if filters:
             payload["filters"] = filters
 
-        if pagination:
-            payload["pagination"] = pagination
-
-        res = self.post(url, json=payload)
-        res.raise_for_status()
-        body = res.json()
-        return body["data"]
+        return self._ipf_pager(url, payload)
 
     def _get_columns(self, url: str):
         """
@@ -270,3 +217,31 @@ class IPFClient(httpxClient):
         if limit + start < r["_meta"]["count"]:
             self._ipf_pager(url, payload, data, start+limit)
         return data
+
+
+class Table:
+    def __init__(self, client: IPFClient, name: str):
+        self.endpoint = name
+        self.name = name.split('/')[-1]
+        self.client = client
+
+    def all(self, filters: dict = None, snapshot_id: Optional[str] = None):
+        """
+        Gets all data from corresponding endpoint
+        :param filters: dict: Optional filters
+        :param snapshot_id: str: Optional snapshot ID to override class
+        :return: list: List of Dictionaries
+        """
+        return self.client.fetch_all(self.endpoint, filters=filters, snapshot_id=snapshot_id)
+
+
+class Inventory:
+    def __init__(self, client: IPFClient):
+        self.sites = Table(client, '/tables/inventory/sites')
+        self.devices = Table(client, '/tables/inventory/devices')
+        self.models = Table(client, '/tables/inventory/summary/models')
+        self.platforms = Table(client, '/tables/inventory/summary/platforms')
+        self.families = Table(client, '/tables/inventory/summary/families')
+        self.vendors = Table(client, '/tables/inventory/summary/vendors')
+        self.part_numbers = Table(client, '/tables/inventory/pn')
+        self.interfaces = Table(client, '/tables/inventory/interfaces')
