@@ -32,3 +32,11 @@ create our own webhook listener using FastAPI.
 
 Blog:      To Be Posted
 Directory: [part-3](part-3)
+
+Note: This will deploy using HTTP not HTTPS.  If you want to secure your webpage consider 
+using Nginx or visit https://fastapi.tiangolo.com/deployment/https/
+
+Note: Heavy background computation processes might need to require celery workers.  As you add 
+automations to this base webhook listener it might degrade performance.  Since IP Fabric 
+discoveries are usually scheduled once or twice a day this lightweight API should be enough
+to handle your needs.  An example celery project: https://github.com/GregaVrbancic/fastapi-celery

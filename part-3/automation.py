@@ -11,18 +11,20 @@ def do_long_process(event: Event):
 
 
 def ipf_webhook(event: Event):
-    if event.type != 'intent-verification' or event.action != 'calculate' or event.status != 'completed':
-        intent_completed(event)
-    elif event.type != 'snapshot' or event.action != 'discover' or event.status != 'completed':
-        discover_completed(event)
+    if event.test:
+        print("Test event")
+    elif event.status == 'completed' and (event.snapshot or event.snapshot_id):
+        if event.type == 'intent-verification' and event.action == 'calculate':
+            intent_completed(event)
+        elif event.type == 'snapshot' and event.action == 'discover':
+            discover_completed(event)
 
 
 def intent_completed(event: Event):
-    print(event.__dict__)
+    print(f"Intent completed for snapshot {event.snapshot_id}")
 
 
 def discover_completed(event: Event):
     ipf = IPFClient(settings.ipf_instance, token=settings.ipf_token, verify=False, snapshot_id=event.snapshot.id)
     devices = ipf.inventory.devices.all()
     print(f"Total devices in Snapshot are: {len(devices)}")
-
