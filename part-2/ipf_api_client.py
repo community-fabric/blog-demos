@@ -175,18 +175,22 @@ class IPFClient(httpxClient):
         return self._ipf_pager(url, payload)
 
     @check_format
-    def query(self, url: str, data: Union[str, dict]):
+    def query(self, url: str, payload: Union[str, dict], all: bool = True):
         """
         Submits a query, does no formating on the parameters.  Use for copy/pasting from the webpage.
         :param url: str: Example: https://demo1.ipfabric.io/api/v1/tables/vlan/device-summary
-        :param data: Union[str, dict]: Dictionary to submit in POST or can be JSON string (i.e. read from file).
+        :param payload: Union[str, dict]: Dictionary to submit in POST or can be JSON string (i.e. read from file).
+        :param all: bool: Default use pager to get all results and ignore pagination information in the payload
         :return: list: List of Dictionary objects.
         """
-        if isinstance(data, str):
-            data = loads(data)
-        res = self.post(url, json=data)
-        res.raise_for_status()
-        return res.json()["data"]
+        if isinstance(payload, str):
+            payload = loads(payload)
+        if all:
+            return self._ipf_pager(url, payload)
+        else:
+            res = self.post(url, json=payload)
+            res.raise_for_status()
+            return res.json()["data"]
 
     def _get_columns(self, url: str):
         """

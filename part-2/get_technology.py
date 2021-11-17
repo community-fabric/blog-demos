@@ -55,8 +55,10 @@ if __name__ == '__main__':
         "reports": "/technology/vlans/device-summary"
     }
     vlans = ipf.query('tables/vlan/device-summary', data)
+    print(f"Count of VLANS {len(vlans)}")
     pprint(vlans[0])
     """
+    Count of VLANS 276
     {'activeVlanCount': 11,
      'hostname': 'L34AC11',
      'id': '1119052963',
@@ -68,9 +70,11 @@ if __name__ == '__main__':
     print()
 
     with open('ospf.json', 'r') as f:
-        ospf = ipf.query('tables/networks/routes', f.read())
+        ospf = ipf.query('tables/networks/routes', f.read(), all=False)
+    print(f"Count of routes {len(ospf)}")
     pprint(ospf[0])
     """
+    Count of routes 33
     {'hostname': 'L1R16',
      'id': '1118750250',
      'network': '10.71.0.0/16',
