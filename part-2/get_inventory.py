@@ -12,6 +12,7 @@ if __name__ == '__main__':
     """
     ['devices', 'families', 'interfaces', 'models', 'part_numbers', 'platforms', 'sites', 'vendors']
     """
+    print()
 
     sites = ipf.inventory.sites.all()
     print(f"Number of sites: {len(sites)}")
@@ -27,7 +28,6 @@ if __name__ == '__main__':
      'siteUid': 'HWL',
      ...}
     """
-
     print()
 
     devices = ipf.inventory.devices.all(filters={
@@ -52,3 +52,17 @@ if __name__ == '__main__':
      'id': '1137600732',
      ...}
      """
+    print()
+
+    vendors = ipf.inventory.vendors.all(columns=["vendor"])
+
+    print(f"Number of vendors: {len(vendors)}")
+    [print(vendor["vendor"]) for vendor in vendors]
+    """
+    Number of vendors: 14
+    arista
+    aws
+    checkpoint
+    cisco
+    ...
+    """

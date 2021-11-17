@@ -1,0 +1,45 @@
+{
+  "columns": [
+    "id",
+    "sn",
+    "hostname",
+    "siteKey",
+    "siteName",
+    "network",
+    "prefix",
+    "protocol",
+    "vrf",
+    "nhCount",
+    "nhLowestAge",
+    "nhLowestMetric",
+    "nexthop"
+  ],
+  "filters": {
+    "and": [
+      {
+        "network": [
+          "neq",
+          "0.0.0.0/0"
+        ]
+      },
+      {
+        "protocol": [
+          "eq",
+          "O"
+        ]
+      },
+      {
+        "prefix": [
+          "lt",
+          24
+        ]
+      }
+    ]
+  },
+  "pagination": {
+    "limit": 33,
+    "start": 0
+  },
+  "snapshot": "d3bd033e-1ba6-4b27-86f5-18824a1a495e",
+  "reports": "/technology/routing/routes"
+}

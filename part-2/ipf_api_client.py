@@ -36,8 +36,8 @@ class IPFClient(httpxClient):
         :param base_url: str: IP Fabric instance provided in 'base_url' parameter, or the 'IPF_URL' environment variable
         :param token: str: API token or 'IPF_TOKEN' environment variable
         :param snapshot_id: str: IP Fabric snapshot ID to use by default for database actions - defaults to '$last'
-        :param vargs:
-        :param kwargs:
+        :param vargs: list: List to pass to httpx
+        :param kwargs: dict: Keyword args to pass to httpx
         """
         try:
             base_url = urljoin(base_url or os.environ["IPF_URL"], "api/v1/")
@@ -116,6 +116,7 @@ class IPFClient(httpxClient):
         limit: Optional[int] = 1000,
         start: Optional[int] = 0,
         snapshot_id: Optional[str] = None,
+        reports: Optional[str] = None
     ):
         """
         Gets data from IP Fabric for specified endpoint
@@ -125,6 +126,7 @@ class IPFClient(httpxClient):
         :param limit: int: Default to 1,000 rows
         :param start: int: Starts at 0
         :param snapshot_id: str: Optional snapshot_id to override default
+        :param reports: str: String of frontend URL where the reports are displayed
         :return: list: List of Dictionary objects.
         """
 
@@ -138,6 +140,8 @@ class IPFClient(httpxClient):
         )
         if filters:
             payload["filters"] = filters
+        if reports:
+            payload["report"] = reports
 
         res = self.post(url, json=payload)
         res.raise_for_status()
@@ -150,6 +154,7 @@ class IPFClient(httpxClient):
             columns: Optional[list[str]] = None,
             filters: Optional[Union[dict, str]] = None,
             snapshot_id: Optional[str] = None,
+            reports: Optional[str] = None
     ):
         """
         Gets all data from IP Fabric for specified endpoint
@@ -157,12 +162,15 @@ class IPFClient(httpxClient):
         :param columns: list: Optional list of columns to return, None will return all
         :param filters: dict: Optional dictionary of filters
         :param snapshot_id: str: Optional snapshot_id to override default
+        :param reports: str: String of frontend URL where the reports are displayed
         :return: list: List of Dictionary objects.
         """
 
         payload = dict(columns=columns or self._get_columns(url), snapshot=snapshot_id or self.snapshot_id)
         if filters:
             payload["filters"] = filters
+        if reports:
+            payload["report"] = reports
 
         return self._ipf_pager(url, payload)
 
