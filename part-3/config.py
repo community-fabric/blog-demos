@@ -13,8 +13,8 @@ class Settings(BaseSettings):
         ipf_token: str
     """
     ipf_secret: str = "9b60669e6803fc67b974707fa8c375c2"
-    ipf_instance: str = 'https://192.168.1.102:8443'
-    ipf_token: str = '7ff5706154cf07047badd77add7f64f'
+    ipf_instance: str = 'https://192.168.1.100:8444'
+    ipf_token: str = 'b02cf6128134a08f2f161593476667c'
 
 
 settings = Settings()

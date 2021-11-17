@@ -1,13 +1,12 @@
 import hmac
-from datetime import datetime
-from typing import Optional
 
 import uvicorn
-from fastapi import FastAPI, Header, HTTPException, Request, status
+from fastapi import FastAPI, Header, HTTPException, Request, status, BackgroundTasks
 from fastapi.responses import RedirectResponse
-from pydantic import BaseModel
 
 from config import settings
+from automation import do_long_process, ipf_webhook
+from models import Event
 
 app = FastAPI()
 
@@ -22,23 +21,8 @@ async def root():
     return "Ok"
 
 
-class Snapshot(BaseModel):
-    id: str
-    name: Optional[str]
-
-
-class Event(BaseModel):
-    type: str
-    action: str
-    status: str
-    test: Optional[bool] = False
-    requester: str
-    snapshot: Optional[Snapshot] = None
-    timestamp: datetime
-
-
 @app.post('/webhook', status_code=status.HTTP_204_NO_CONTENT)
-async def webhook(data: Event, request: Request, x_ipf_signature: str = Header(None)):
+async def webhook(event: Event, request: Request, bg_task: BackgroundTasks, x_ipf_signature: str = Header(None)):
     input_hmac = hmac.new(
         key=settings.ipf_secret.encode(),
         msg=await request.body(),
@@ -46,7 +30,8 @@ async def webhook(data: Event, request: Request, x_ipf_signature: str = Header(N
     )
     if not hmac.compare_digest(input_hmac.hexdigest(), x_ipf_signature):
         raise HTTPException(status_code=400, detail="X-IPF-Signature does not match.")
-    print(data.__dict__)
+    bg_task.add_task(do_long_process, event)
+    bg_task.add_task(ipf_webhook, event)
 
 
 if __name__ == "__main__":
