@@ -4,25 +4,23 @@ This repository contains example code for communicating to IP Fabric using Pytho
 Code being referenced is featured on [IP Fabric Blog](https://ipfabric.io/blog/)
 
 ## Information
-Code is being written and maintained by [Justin Jeffery](mailto:justin.jeffery@ipfabric.io).  
 If you would like to learn more about our product please visit us at [IP Fabric](ipfabric.io). 
 
-## Python Programmability - Part 1
+## API Programmability - Part 1
 
 This blog talked about the basics of communicating to the API using requests.
 We also showed how to use the user interface to create an API key and view API documentation.
 
 Blog:      To Be Posted 
-Directory: [part-1](part-1)
+Directory: [api-part-1](api-part-1)
 
 ## Python Programmablity- Part 2
 
-In this blog we expand on the [httpx implementation](https://github.com/community-fabric/integration-demos/tree/main/api_clients/ipf)
-in the community-fabric GitHub.  We added additional functions to get all inventory data
-and used different methods to pull data.
+In this blog we are using the [ipfabric](https://github.com/community-fabric/python-ipfabric)
+Python package in the community-fabric GitHub.
 
 Blog:      To Be Posted
-Directory: [part-2](part-2)
+Directory: [python-part-2](python-part-2)
 
 ## Python Programmablity- Part 3: Webhooks
 
@@ -31,7 +29,7 @@ accept webhooks or you are not able to program logic around incoming data?  In t
 create our own webhook listener using FastAPI.
 
 Blog:      To Be Posted
-Directory: [part-3](part-3)
+Directory: [python-part-3](python-part-3)
 
 Note: This will deploy using HTTP not HTTPS.  If you want to secure your webpage consider 
 using Nginx or visit https://fastapi.tiangolo.com/deployment/https/
