@@ -1,6 +1,6 @@
 from time import sleep
 from models import Event
-from ipf_api_client import IPFClient
+from ipfabric import IPFClient
 from config import settings
 
 
