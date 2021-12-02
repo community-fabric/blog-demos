@@ -21,8 +21,8 @@ async def root():
     return "Ok"
 
 
-@app.post('/webhook', status_code=status.HTTP_204_NO_CONTENT)
-async def webhook(event: Event, request: Request, bg_task: BackgroundTasks, x_ipf_signature: str = Header(None)):
+@app.post('/ipfabric', status_code=status.HTTP_204_NO_CONTENT)
+async def ipfabric(event: Event, request: Request, bg_task: BackgroundTasks, x_ipf_signature: str = Header(None)):
     input_hmac = hmac.new(
         key=settings.ipf_secret.encode(),
         msg=await request.body(),
