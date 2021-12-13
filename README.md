@@ -6,12 +6,11 @@ Code being referenced is featured on [IP Fabric Blog](https://ipfabric.io/blog/)
 ## Information
 If you would like to learn more about our product please visit us at [IP Fabric](ipfabric.io). 
 
-## API Programmability - Part 1
+## [API Programmability - Part 1](https://ipfabric.io/blog/api-programmability-part-1/)
 
 This blog talked about the basics of communicating to the API using requests.
 We also showed how to use the user interface to create an API key and view API documentation.
 
-Blog:      To Be Posted 
 Directory: [api-part-1](api-part-1)
 
 ## Python Programmablity- Part 2
